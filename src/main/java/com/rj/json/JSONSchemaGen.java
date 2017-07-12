@@ -62,6 +62,7 @@ public class JSONSchemaGen {
 			schema.append("\"canbenull\" : " + field.canBeNull() + ",");
 			schema.append("\"minimum\" : " + (long)field.getMin() + ",");
 			schema.append("\"maximum\" : " + (long)field.getMax() + ",");
+			schema.append("\"average\" : " + field.getAvg() + ",");
 			schema.append("\"items\" : {");
 			if(children.size() > 0){
 				for(i=0; i < children.size()-1; i++){
@@ -90,6 +91,9 @@ public class JSONSchemaGen {
 			schema.append(",");
 			schema.append("\"minimum\" : " + (long)field.getMin() + ",");
 			schema.append("\"maximum\" : " + (long)field.getMax());
+			if(type == DataType.STRING){
+				schema.append(",\"average\" : " + (long)field.getAvg());
+			}
 			Object[] samples = field.getSamples().toArray();
 			if(samples.length > 0){
 				schema.append(",\"samples\" : \"");
@@ -121,11 +125,10 @@ public class JSONSchemaGen {
 			schema.append(",");
 		}
 		printJSON(fields.get(i));
-		schema.append("}");
-		schema.append("}");
+		schema.append("}}");
 		
 		try {
-			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 			JsonParser jp = new JsonParser();
 			JsonElement je = jp.parse(schema.toString());
 			String prettyJsonString = gson.toJson(je);
@@ -181,12 +184,15 @@ public class JSONSchemaGen {
 			break;
 		case STRING:
 			val = ((String)obj).length();
-			String pattern= "^[a-zA-Z0-9]*$";
-		    if(val < 30 && ((String)obj).matches(pattern))
-				sample = (String)obj;
+			String pattern= "^[a-zA-Z0-9$&+:;=\\-.%^()_~`?@#|\\s]*$";
+		    if(val < 100 && ((String)obj).matches(pattern)){
+		      sample = (String)obj;
+		    }
+		    field.setAvg((int)val);
 			break;
 		case ARRAY:
 			val = ((JSONArray)obj).size();
+			field.setAvg((int)val);
 			break;
 		default:
 			break;
@@ -216,14 +222,14 @@ public class JSONSchemaGen {
 					field.addChild(child);
 				}
 				parseJSON(((JSONObject)json).get(key), key, child);
-				field.incrementCount();
 				hasFields = true;
 			}
+			field.incrementCount();
 		}else if(json instanceof JSONArray){
 			for(int i=0; i<((JSONArray)json).size();i++) {
 				Object j = ((JSONArray)json).get(i);
 				DataType type = getFieldType(j);
-				String fldkey = type.toString();
+				String fldkey = nodekey+"_"+type.toString();
 				DataField child = field.getChild(fldkey);
 				if(child == null){
 					child = new DataField(fldkey, type);
@@ -233,6 +239,8 @@ public class JSONSchemaGen {
 				hasFields = true;
 			}
 			setMinMax(field, json);
+		}else if(json == null){
+		  hasFields = false;
 		}else{
 			// Set min/max if NUMERIC datatypes
 			setMinMax(field, json);

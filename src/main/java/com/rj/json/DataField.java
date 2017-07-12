@@ -1,17 +1,17 @@
 package com.rj.json;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class DataField {
-	private String _name;
+	private String _name, _subName;
 	private DataType _type;
 	private boolean _canbenull;
+	private static String[] sampleIgnores= {"business_id", "user_id", "review_id", "tip_id", "text", "friends"};
 	private Set<String> _samples;
+	private int _maxsamplesize;
 	private double _max;
 	private double _min;
+	private long _avg;
 	private long _count;
 	private List<DataField> _children = null;
 	
@@ -19,11 +19,14 @@ public class DataField {
 		this._name = name;
 		this._type= type;
 		this._count = 0;
+		this._avg = 0;
 		this._max = Double.MIN_VALUE;
 		this._min = Double.MAX_VALUE;
 		this._canbenull = false;
 		this._children = new ArrayList<DataField>();
 		this._samples = new TreeSet<>();
+		this._maxsamplesize = 0;
+		this._subName = _name.lastIndexOf("_")>0?_name.substring(0,_name.lastIndexOf("_")):null;
 	}
 	
 	public void setMin(double min){
@@ -36,13 +39,24 @@ public class DataField {
 			_max = max;
 	}
 	
+	public void setAvg(int len){
+		_avg=(_avg+len);
+	}
+	
 	public void setCanBeNull(){
 		_canbenull = true;
 	}
 	
+	private boolean ignoreSample(){
+	  if(_subName != null && Arrays.asList(sampleIgnores).contains(_subName))
+	    return true;
+	  return Arrays.asList(sampleIgnores).contains(_name);
+	}
 	public void addSample(String sample){
-		if(_samples.size() < 10)
+		if(_samples.size() < 10 || (_type == DataType.STRING && !ignoreSample())){
+			_maxsamplesize=sample.length()>_maxsamplesize?sample.length():_maxsamplesize;
 			_samples.add(sample);
+		}
 	}
 	
 	public Set<String> getSamples(){
@@ -99,5 +113,9 @@ public class DataField {
 	
 	public double getMax(){
 		return _max;
+	}
+	
+	public long getAvg(){
+		return _avg/_count;
 	}
 }
