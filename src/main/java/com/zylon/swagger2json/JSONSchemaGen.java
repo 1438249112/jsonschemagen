@@ -20,13 +20,21 @@ public class JSONSchemaGen {
 	
 	
 	public void printJSON(String objectName){
+		//1. find an object in the Swagger . 
 		parseJSON(objectName, JSONObject);
-		parseRef(map.get(objectName));
+		//2. add properties for the child object that have a attribute named $ref . 
+		parseRef(map.get(objectName),JSONObject);
+		
+		//3. delete all useless attributes . 
+		Object schemaJson = map.get(objectName);
+		map = null;
+		JSONObject = null;
 		HashSet<String> set = new HashSet<String>();
 		set.add("description");set.add("title");set.add("$ref");
-		deletedAttrs(map.get(objectName),set);
-		((JSONObject)map.get(objectName)).put("$schema","http://json-schema.org/draft-04/schema#");
-		System.out.println(map.get(objectName));
+		deletedAttrs(schemaJson,set);
+		//4. add schema version attribute .
+		((JSONObject)schemaJson).put("$schema","http://json-schema.org/draft-04/schema#");
+		System.out.println(schemaJson);
 	}
 	
 	private void deletedAttrs(Object json, HashSet<String> set) {
@@ -41,28 +49,22 @@ public class JSONSchemaGen {
 			
 	}
 
-
-
-
-
-
-
-	public void parseRef(Object json){
+	public void parseRef(Object json, org.json.simple.JSONObject jSONObject){
 		String objectName = null;
 		if(json instanceof JSONObject){
 			for(Iterator<?> iter = ((JSONObject)json).keySet().iterator(); iter.hasNext();) {
 				String key = (String) iter.next();
 				if(key.equalsIgnoreCase("$ref")){
 					objectName = 	(((JSONObject)json).get(key)).toString().substring((((JSONObject)json).get(key)).toString().lastIndexOf("/")+1);
-				System.out.println(objectName);
+//				System.out.println(objectName);
 					parseJSON(objectName, JSONObject);
 				}else{
-					parseRef(((JSONObject)json).get(key));
+					parseRef(((JSONObject)json).get(key),jSONObject);
 				}
 			}
 			if(objectName!=null){
 				try {
-					parseRef(map.get(objectName));
+					parseRef(map.get(objectName),jSONObject);
 					((JSONObject)json).put("properties", ((JSONObject)map.get(objectName)).get("properties"));
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -136,7 +138,7 @@ public class JSONSchemaGen {
 	}
 	
 	public static void main(String[] args) {
-		if(args.length == 0){
+		if(args.length < 2){
 			
 			usage();
 			return;
@@ -149,7 +151,9 @@ public class JSONSchemaGen {
 		}
 		
 		JSONSchemaGen jsg = new JSONSchemaGen();
+		// the  name of swagger json file
 		jsg.parseFile(args[0]);
-		jsg.printJSON("GetCaseModel");
+		//the object name that need to be print .
+		jsg.printJSON(args[1]);
 	}
 }
