@@ -29,10 +29,12 @@ public class JSONSchemaGen {
 		map = null;
 		JSONObject = null;
 		HashSet<String> set = new HashSet<String>();
+		// descript all the leaf attributes .
+		descAttrs(schemaJson);
 		set.add("description");
 		set.add("title");
 		set.add("$ref");
-		descAttrs(schemaJson);
+	
 		deletedAttrs(schemaJson, set);
 		// 4. add schema version attribute .
 		((JSONObject) schemaJson).put("$schema", "http://json-schema.org/draft-04/schema#");
