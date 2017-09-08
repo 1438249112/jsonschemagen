@@ -32,10 +32,111 @@ public class JSONSchemaGen {
 		set.add("description");
 		set.add("title");
 		set.add("$ref");
+		descAttrs(schemaJson);
 		deletedAttrs(schemaJson, set);
 		// 4. add schema version attribute .
 		((JSONObject) schemaJson).put("$schema", "http://json-schema.org/draft-04/schema#");
 		System.out.println(schemaJson);
+	}
+
+	private void descAttrs(Object json) {
+		if (json instanceof JSONObject) {
+			JSONObject jsonObj = (JSONObject) json;
+			parseProperties(jsonObj.get("properties"), null);
+		}
+	}
+
+	private void parseProperties(Object json, String attrPath) {
+
+		if (json instanceof JSONObject) {
+			JSONObject jsonObj = (JSONObject) json;
+			for (Iterator<?> iter = ((JSONObject) jsonObj).keySet().iterator(); iter.hasNext();) {
+				String key = (String) iter.next();
+				String path = "";
+				if (attrPath == null) {
+					path = key;
+				} else {
+					path = attrPath + "/" + key;
+				}
+
+				parseField(((JSONObject) jsonObj).get(key), key, path);
+
+			}
+		}
+
+	}
+
+	private void parseArrayProperties(Object json, String attrPath) {
+
+		if (json instanceof JSONObject) {
+			JSONObject jsonObj = (JSONObject) json;
+			for (Iterator<?> iter = ((JSONObject) jsonObj).keySet().iterator(); iter.hasNext();) {
+				String key = (String) iter.next();
+				String path = "";
+				if (attrPath == null) {
+					path = key;
+				} else {
+					path = attrPath + "[]/" + key;
+				}
+				parseField(((JSONObject) jsonObj).get(key), key, path);
+
+			}
+		}
+
+	}
+
+	private void parseField(Object json, String fieldName, String attrPath) {
+
+		if (json instanceof JSONObject) {
+			JSONObject jsonObj = (JSONObject) json;
+			if (!"object".equals(jsonObj.get("type")) && !"array".equals(jsonObj.get("type"))) {
+				if(jsonObj.get("enum")!=null){
+					System.out.println(parseFieldName(fieldName) + "	" + attrPath + "	enum" + "	"
+							+jsonObj.get("enum")+";"+jsonObj.get("description"));
+				}else{
+					System.out.println(parseFieldName(fieldName) + "	" + attrPath + "	" + jsonObj.get("type") + "	"
+							+ jsonObj.get("description"));
+				}
+			
+			}
+
+			if (jsonObj.get("properties") != null) {
+				parseProperties(jsonObj.get("properties"), fieldName);
+			}
+			if (((JSONObject) jsonObj.get("items")) != null
+					&& ((JSONObject) jsonObj.get("items")).get("properties") != null) {
+				parseArrayProperties(((JSONObject) jsonObj.get("items")).get("properties"), fieldName);
+			}
+
+		}
+
+	}
+
+	private String parseFieldName(String fieldName) {
+		String result = "";
+		if (fieldName != null) {
+			ArrayList<String> words = splitByUpperCase(fieldName);
+		
+			for (String word : words) {
+				result+=word+" ";
+			}
+		}
+		return result;
+	}
+
+	private ArrayList<String> splitByUpperCase(String str) {
+		ArrayList<String> rs = new ArrayList<String>();
+		int index = 0;
+		int len = str.length();
+		for (int i = 1; i < len; i++) {
+			if (Character.isUpperCase(str.charAt(i))) {
+				rs.add(str.substring(index, i));
+				index = i;
+			}
+		}
+		rs.add(str.substring(index, len));
+		return rs;
+
 	}
 
 	private void deletedAttrs(Object json, HashSet<String> set) {
